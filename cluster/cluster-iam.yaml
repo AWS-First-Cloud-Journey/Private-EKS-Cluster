@@ -1,0 +1,46 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: <CLUSTER_NAME>
+  region: ap-southeast-1
+
+iam:
+  withOIDC: true
+  serviceAccounts:
+  - metadata:
+      name: secret-manager-access-sa
+      namespace: izion-<CLUSTER_ENVIRONMENT>
+      labels: {aws-usage: "secret-manager"}
+    attachPolicyARNs:
+    - <SECRET_MANAGER_POLICY_ARN>
+    roleName: <CLUSTER_NAME>-secret-manager-access-sa-role
+  - metadata:
+      name: efs-csi-sa
+      namespace: kube-system
+      labels: {aws-usage: "efs-csi"}
+    attachPolicyARNs:
+    - <EFS_CSI_POLICY_ARN>
+    roleName: <CLUSTER_NAME>-efs-csi-sa-role
+  - metadata:
+      name: alb-controller-sa
+      namespace: kube-system
+      labels: {aws-usage: "alb-controller"}
+    attachPolicyARNs:
+    - <ALB_CONTROLLER_POLICY_ARN>
+    roleName: <CLUSTER_NAME>-alb-controller-sa-role
+  - metadata:
+      name: cluster-autoscaler-sa
+      namespace: kube-system
+      labels: {aws-usage: "cluster-ops"}
+    wellKnownPolicies:
+      autoScaler: true
+    roleName: <CLUSTER_NAME>-cluster-autoscaler-sa-role
+    roleOnly: true
+  - metadata:
+      name: external-dns-sa
+      namespace: kube-system
+      labels: {aws-usage: "route53-controller"}
+    attachPolicyARNs:
+    - <ROUTE53_DNS_POLICY_ARN>
+    roleName: <CLUSTER_NAME>-external-dns-sa-role

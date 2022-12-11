@@ -1,0 +1,18 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  namespace: <NAMESPACE>
+  name: <APP>-ingress
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/tags: env=<ENV>, app=<APP>
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/subnets: <SUBNET_ID_A>, <SUBNET_ID_B>, <SUBNET_ID_C>
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /*
+            backend:
+              serviceName: <SERVICE_NAME>
+              servicePort: <SERVICE_PORT>

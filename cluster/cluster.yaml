@@ -1,0 +1,26 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: eks-test
+  region: ap-southeast-1
+  version: "1.24"
+
+vpc:
+  clusterEndpoints:
+     privateAccess: true
+     publicAccess: true
+  subnets:
+    private:
+      ap-southeast-1a: { id: 	subnet-028f6388fa4220cac }
+      ap-southeast-1b: { id:	subnet-03248bedb348d34ea }
+      ap-southeast-1c: { id: subnet-0e3cde89c7b854359 }
+    # public:
+    #   ap-southeast-1a: { id: <SUBNET_PUBLIC_A> }
+    #   ap-southeast-1b: { id: <SUBNET_PUBLIC_B> }
+    #   ap-southeast-1c: { id: <SUBNET_PUBLIC_C> }
+
+cloudWatch:
+  clusterLogging:
+    enableTypes:
+      - "audit"

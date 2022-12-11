@@ -1,0 +1,13 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: eks-test
+  region: ap-southeast-1
+  version: "1.24"
+
+vpc:
+  clusterEndpoints:
+     privateAccess: true
+     publicAccess: false
+

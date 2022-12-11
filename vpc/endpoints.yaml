@@ -1,0 +1,206 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'EKS Private Cluster. These subnets do not have access to the Internet and this templates creates the recommended VPC Endpoints for running EKS Clusters.'
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: The VPC ID that EKS clusters reside.
+
+  VpcBlock:
+    Type: String
+    Description: The CIDR range for the VPC. This should be a valid private (RFC 1918) CIDR range.
+  
+  PrivateSubnet01Id:
+    Type: AWS::EC2::Subnet::Id
+    Description: Private Subnet 1 ID
+
+  PrivateSubnet01Block:
+    Type: String
+    Description: CidrBlock for private subnet 01 within the VPC
+
+  PrivateSubnet02Id:
+    Type: AWS::EC2::Subnet::Id
+    Description: Private Subnet 2 ID
+
+  PrivateSubnet02Block:
+    Type: String
+    Description: CidrBlock for private subnet 02 within the VPC
+
+  PrivateSubnet03Id:
+    Type: AWS::EC2::Subnet::Id
+    Description: Private Subnet 3 ID
+
+  PrivateSubnet03Block:
+    Type: String
+    Description: CidrBlock for private subnet 03 within the VPC
+
+  PrivateRouteTableId:
+    Type: String
+    Description: Private route table for private subnets
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: "Primary Worker Network Configuration"
+        Parameters:
+          - VpcId
+          - VpcBlock
+          - PrivateSubnet01Id
+          - PrivateSubnet01Block
+          - PrivateSubnet02Id
+          - PrivateSubnet02Block
+          - PrivateSubnet03Id
+          - PrivateSubnet03Block
+          - PrivateRouteTableId
+Conditions:
+  Has2Azs:
+    Fn::Or:
+      - Fn::Equals:
+        - {Ref: 'AWS::Region'}
+        - ap-south-1
+      - Fn::Equals:
+        - {Ref: 'AWS::Region'}
+        - ap-northeast-2
+      - Fn::Equals:
+        - {Ref: 'AWS::Region'}
+        - ca-central-1
+      - Fn::Equals:
+        - {Ref: 'AWS::Region'}
+        - cn-north-1
+      - Fn::Equals:
+        - {Ref: 'AWS::Region'}
+        - sa-east-1
+      - Fn::Equals:
+        - {Ref: 'AWS::Region'}
+        - us-west-1
+
+  HasMoreThan2Azs:
+    Fn::Not:
+      - Condition: Has2Azs
+
+Mappings:
+  ServiceNamePrefixMap:
+    aws:
+      Name: com.amazonaws
+    aws-cn:
+      Name: cn.com.amazonaws
+    aws-us-gov:
+      Name: com.amazonaws
+
+Resources:
+  EndpointSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group to govern who can access the endpoints
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref VpcBlock
+          
+  S3APIEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.s3"
+      VpcEndpointType: Gateway
+      RouteTableIds:
+        - !Ref PrivateRouteTableId
+      VpcId: !Ref VpcId
+
+  ECRAPIEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: 
+        !Join [ ".", [ !FindInMap [ServiceNamePrefixMap, !Ref "AWS::Partition", Name], !Ref "AWS::Region", "ecr.api" ] ]
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true 
+      SecurityGroupIds:
+        - !GetAtt EndpointSecurityGroup.GroupId
+      SubnetIds:
+        - !Ref PrivateSubnet01Id
+        - !Ref PrivateSubnet02Id
+        - Fn::If:
+          - HasMoreThan2Azs
+          - !Ref PrivateSubnet03Id
+          - !Ref AWS::NoValue
+      VpcId: !Ref VpcId
+
+  ECRDockerEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: 
+        !Join [ ".", [ !FindInMap [ServiceNamePrefixMap, !Ref "AWS::Partition", Name], !Ref "AWS::Region", "ecr.dkr" ] ]
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true 
+      SecurityGroupIds:
+        - !GetAtt EndpointSecurityGroup.GroupId
+      SubnetIds:
+        - !Ref PrivateSubnet01Id
+        - !Ref PrivateSubnet02Id
+        - Fn::If:
+          - HasMoreThan2Azs
+          - !Ref PrivateSubnet03Id
+          - !Ref AWS::NoValue
+      VpcId: !Ref VpcId
+
+  EC2Endpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: 
+        !Join [ ".", [ !FindInMap [ServiceNamePrefixMap, !Ref "AWS::Partition", Name], !Ref "AWS::Region", "ec2" ] ]
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true 
+      SecurityGroupIds:
+        - !GetAtt EndpointSecurityGroup.GroupId
+      SubnetIds:
+        - !Ref PrivateSubnet01Id
+        - !Ref PrivateSubnet02Id
+        - Fn::If:
+          - HasMoreThan2Azs
+          - !Ref PrivateSubnet03Id
+          - !Ref AWS::NoValue
+      VpcId: !Ref VpcId
+
+  CWLogsEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.logs"
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true 
+      SecurityGroupIds:
+        - !GetAtt EndpointSecurityGroup.GroupId
+      SubnetIds:
+        - !Ref PrivateSubnet01Id
+        - !Ref PrivateSubnet02Id
+        - Fn::If:
+          - HasMoreThan2Azs
+          - !Ref PrivateSubnet03Id
+          - !Ref AWS::NoValue
+      VpcId: !Ref VpcId
+
+  STSEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: 
+        !Join [ ".", [ !FindInMap [ServiceNamePrefixMap, !Ref "AWS::Partition", Name], !Ref "AWS::Region", "sts" ] ]
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true 
+      SecurityGroupIds:
+        - !GetAtt EndpointSecurityGroup.GroupId
+      SubnetIds:
+        - !Ref PrivateSubnet01Id
+        - !Ref PrivateSubnet02Id
+        - Fn::If:
+          - HasMoreThan2Azs
+          - !Ref PrivateSubnet03Id
+          - !Ref AWS::NoValue
+      VpcId: !Ref VpcId
+
+Outputs:
+  VpcId:
+    Description: The VPC ID
+    Value: !Ref VpcId

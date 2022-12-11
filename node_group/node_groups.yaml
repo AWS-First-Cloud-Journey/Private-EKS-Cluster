@@ -1,0 +1,53 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: my-cluster
+  region: ap-southeast-1
+
+managedNodeGroups:
+  - name: my-node-group-1
+    availabilityZones: ["ap-southeast-1a", "ap-southeast-1b", "ap-southeast-1c"]
+    instanceTypes: [t2.micro]
+    instanceName: my-node-group-instance-1
+    desiredCapacity: 2
+    minSize: 2
+    maxSize: 2
+    volumeSize: 20
+    privateNetworking: true
+    labels:
+      role: worker
+      env: testing
+    iam:
+      attachPolicyARNs:
+        - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+        - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      withAddonPolicies:
+        autoScaler: True
+        ebs: True
+
+  - name: my-node-group-2
+    availabilityZones: ["ap-southeast-1a", "ap-southeast-1b", "ap-southeast-1c"]
+    instanceTypes: [t2.micro]
+    instanceName: eks-node-group-instance-2
+    desiredCapacity: 2
+    minSize: 2
+    maxSize: 2
+    volumeSize: 20
+    privateNetworking: true
+    labels:
+      role: worker
+      env: testing
+    iam:
+      attachPolicyARNs:
+        - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+        - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      withAddonPolicies:
+        autoScaler: True
+        ebs: True
